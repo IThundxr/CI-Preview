@@ -1,0 +1,9 @@
+t:
+  repository_url: 123
+  webhook_secret: 456
+  channel_id: 1238304164975480913
+
+b:
+  repository_url: 555
+  webhook_secret: 555s2233
+  channel_id: 1238304164975480913
