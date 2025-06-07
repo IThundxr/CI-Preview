@@ -1,16 +1,17 @@
+mod app;
 mod bot;
 mod config;
-mod app;
 mod github;
 
-use std::env;
+use crate::config::app_config::Config;
 use axum::Router;
+use std::env;
+use snafu::{ResultExt, Whatever};
 use tracing::log::info;
 use tracing_subscriber::EnvFilter;
-use crate::config::app_config::Config;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), Whatever> {
     dotenvy::dotenv().ok();
 
     tracing_subscriber::fmt()
@@ -19,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
 
     Config::load_initial();
     // We need to hang onto this for the watcher to actually... watch
-    let _ = Config::watch()?;
+    let _ = Config::watch();
 
     let router = Router::new();
 
@@ -29,8 +30,10 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Listening on {address}");
 
-    let listener = tokio::net::TcpListener::bind(address).await?;
-    axum::serve(listener, router).await?;
+    let listener = tokio::net::TcpListener::bind(&address).await
+        .with_whatever_context(|_| format!("Failed to bind listener to {address}"))?;
+    axum::serve(listener, router).await
+        .with_whatever_context(|_| format!("Failed to serve listener to {address}"))?;
 
     Ok(())
 }
