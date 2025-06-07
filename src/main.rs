@@ -5,8 +5,8 @@ mod github;
 
 use crate::config::app_config::Config;
 use axum::Router;
-use std::env;
 use snafu::{ResultExt, Whatever};
+use std::env;
 use tracing::log::info;
 use tracing_subscriber::EnvFilter;
 
@@ -18,7 +18,16 @@ async fn main() -> Result<(), Whatever> {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    Config::load_initial();
+    // Use an authenticated instance if a token is passed
+    if let Ok(token) = env::var("GITHUB_TOKEN") {
+        if let Ok(instance) = octocrab::OctocrabBuilder::new()
+            .personal_token(token)
+            .build()
+        {
+            octocrab::initialise(instance);
+        }
+    }
+
     // We need to hang onto this for the watcher to actually... watch
     let _ = Config::watch();
 
@@ -30,9 +39,11 @@ async fn main() -> Result<(), Whatever> {
 
     info!("Listening on {address}");
 
-    let listener = tokio::net::TcpListener::bind(&address).await
+    let listener = tokio::net::TcpListener::bind(&address)
+        .await
         .with_whatever_context(|_| format!("Failed to bind listener to {address}"))?;
-    axum::serve(listener, router).await
+    axum::serve(listener, router)
+        .await
         .with_whatever_context(|_| format!("Failed to serve listener to {address}"))?;
 
     Ok(())

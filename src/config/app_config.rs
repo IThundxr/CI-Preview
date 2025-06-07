@@ -1,15 +1,23 @@
 use arc_swap::{ArcSwap, Guard};
 use notify::{Error, Event, INotifyWatcher, RecommendedWatcher, RecursiveMode, Watcher};
+use once_cell::sync::Lazy;
 use serde::Deserialize;
 use serenity::all::ChannelId;
+use snafu::{ResultExt, Whatever};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::sync::{Arc, OnceLock};
-use snafu::{ResultExt, Whatever};
+use std::sync::Arc;
 use tracing::log::{error, info};
 
-static CONFIG: OnceLock<ArcSwap<HashMap<String, Config>>> = OnceLock::new();
+static CONFIG: Lazy<ArcSwap<HashMap<String, Config>>> = Lazy::new(|| {
+    let config = Config::load().unwrap_or_else(|e| {
+        error!("Failed to load config: {e}");
+        Default::default()
+    });
+
+    ArcSwap::from_pointee(config)
+});
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Config {
@@ -20,8 +28,7 @@ pub struct Config {
 
 impl Config {
     fn reload() {
-        let result =
-            Self::load().map(|new_config| CONFIG.get().unwrap().store(Arc::new(new_config)));
+        let result = Self::load().map(|new_config| CONFIG.store(Arc::new(new_config)));
 
         match result {
             Ok(_) => info!("Configuration reloaded successfully."),
@@ -30,16 +37,12 @@ impl Config {
     }
 
     pub fn get() -> Guard<Arc<HashMap<String, Config>>> {
-        CONFIG.get().unwrap().load()
-    }
-
-    pub fn get_arc() -> Arc<HashMap<String, Config>> {
-        CONFIG.get().unwrap().load_full()
+        CONFIG.load()
     }
 
     fn load() -> Result<HashMap<String, Config>, Whatever> {
-        let config_contents = fs::read_to_string("./config.yml")
-            .whatever_context("Failed to read config.yml")?;
+        let config_contents =
+            fs::read_to_string("./config.yml").whatever_context("Failed to read config.yml")?;
         let parsed = serde_norway::from_str::<HashMap<String, Self>>(&config_contents)
             .whatever_context("Failed to deserialize config.yml")?;
 
@@ -50,17 +53,6 @@ impl Config {
         }
 
         Ok(map)
-    }
-
-    pub fn load_initial() {
-        let config = Self::load().unwrap_or_else(|e| {
-            error!("Failed to load config: {e}");
-            Default::default()
-        });
-
-        CONFIG
-            .set(ArcSwap::from_pointee(config))
-            .expect("Config already loaded.");
     }
 
     pub fn watch() -> Result<INotifyWatcher, Error> {

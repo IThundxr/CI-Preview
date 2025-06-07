@@ -1,19 +1,19 @@
 use crate::config::app_config::Config;
 use crate::config::repo_config::RepoSettings;
+use crate::github::payload_verification::EventError::InvalidSignature;
 use axum::body::Bytes;
+use axum::extract::rejection::BytesRejection;
 use axum::extract::{FromRequest, Request};
 use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use hex::FromHexError;
 use hmac_sha256::HMAC;
 use octocrab::models::repos::Content;
 use octocrab::models::webhook_events::{WebhookEvent, WebhookEventPayload};
 use octocrab::models::workflows::Run;
 use serenity::all::ChannelId;
-use axum::extract::rejection::BytesRejection;
-use axum::response::{IntoResponse, Response};
-use hex::FromHexError;
 use snafu::{OptionExt, ResultExt, Snafu};
 use subtle::ConstantTimeEq;
-use crate::github::payload_verification::EventError::{DeserializationError, InvalidSignature};
 
 pub struct GithubEvent {
     pub event_type: WebhookEvent,
@@ -69,14 +69,12 @@ where
             .and_then(|header| header.to_str().ok())
             .context(InvalidHeaderSnafu)?;
 
-        let event = WebhookEvent::try_from_header_and_body(event, &body)
-            .context(DeserializationSnafu)?;
+        let event =
+            WebhookEvent::try_from_header_and_body(event, &body).context(DeserializationSnafu)?;
 
         let event_clone = event.clone();
 
-        let repo = event_clone
-            .repository
-            .context(InvalidRepositorySnafu)?;
+        let repo = event_clone.repository.context(InvalidRepositorySnafu)?;
 
         let config = Config::get()
             .get(repo.url.as_str())
@@ -90,8 +88,7 @@ where
             .strip_prefix("sha256=")
             .context(MissingSignaturePrefixSnafu)?;
 
-        let signature = hex::decode(signature_hash)
-            .context(InvalidSignatureHexSnafu)?;
+        let signature = hex::decode(signature_hash).context(InvalidSignatureHexSnafu)?;
 
         if HMAC::mac(&body, &config.webhook_secret)
             .ct_ne(&signature)
@@ -117,6 +114,7 @@ where
 
         let mut builder = repo_handler.get_content().path(".ci-preview.yml");
 
+        // TODO: check over
         if let Some(r#ref) = git_ref {
             builder = builder.r#ref(r#ref);
         }
