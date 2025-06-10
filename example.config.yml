@@ -1,9 +1,9 @@
 my-repo:
   repository_url: https://github.com/ithundxr/my-repo
   webhook_secret: very-secure-secret
-  channel_id: 0000000000000000000
+  channel_id: 0000000000000000001
 
 my-other-repo:
   repository_url: https://github.com/ithundxr/my-other-repo
   webhook_secret: even-more-secure-secret
-  channel_id: 0000000000000000000
+  channel_id: 0000000000000000001

@@ -1,9 +1,14 @@
 mod app;
 mod bot;
 mod config;
+mod error;
 mod github;
+mod util;
 
+use crate::app::App;
 use crate::config::app_config::Config;
+use crate::github::web::handle_github_webhhook;
+use axum::routing::post;
 use axum::Router;
 use snafu::{ResultExt, Whatever};
 use std::env;
@@ -28,10 +33,15 @@ async fn main() -> Result<(), Whatever> {
         }
     }
 
+    // Start the bot client
+    let bot_http = bot::start().await;
+
     // We need to hang onto this for the watcher to actually... watch
     let _ = Config::watch();
 
-    let router = Router::new();
+    let router = Router::new()
+        .route("/github/webhook", post(handle_github_webhhook))
+        .with_state(App::new(bot_http));
 
     let ip = env::var("APP_IP").unwrap_or("0.0.0.0".to_string());
     let port = env::var("APP_PORT").unwrap_or("3000".to_string());

@@ -44,7 +44,11 @@ impl Config {
         let config_contents =
             fs::read_to_string("./config.yml").whatever_context("Failed to read config.yml")?;
         let parsed = serde_norway::from_str::<HashMap<String, Self>>(&config_contents)
-            .whatever_context("Failed to deserialize config.yml")?;
+            .with_whatever_context(|e| {
+                error!("Failed to parse config.yml: {e}");
+
+                "Failed to deserialize config.yml"
+            })?;
 
         let mut map = HashMap::new();
 

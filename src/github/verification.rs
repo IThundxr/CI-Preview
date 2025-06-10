@@ -1,61 +1,33 @@
 use crate::config::app_config::Config;
 use crate::config::repo_config::RepoSettings;
-use crate::github::payload_verification::EventError::InvalidSignature;
+use crate::error::Error::InvalidSignature;
+use crate::error::{
+    DeserializationErrorJsonSnafu, Error, FailedToGetRepoConfigSnafu, InvalidBodySnafu,
+    InvalidConfigSnafu, InvalidHeaderSnafu, InvalidRepositorySnafu, InvalidSignatureHexSnafu,
+    MissingSignatureHeaderSnafu, MissingSignaturePrefixSnafu,
+};
 use axum::body::Bytes;
-use axum::extract::rejection::BytesRejection;
 use axum::extract::{FromRequest, Request};
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
-use hex::FromHexError;
 use hmac_sha256::HMAC;
 use octocrab::models::repos::Content;
 use octocrab::models::webhook_events::{WebhookEvent, WebhookEventPayload};
 use octocrab::models::workflows::Run;
 use serenity::all::ChannelId;
-use snafu::{OptionExt, ResultExt, Snafu};
+use snafu::{OptionExt, ResultExt};
 use subtle::ConstantTimeEq;
 
 pub struct GithubEvent {
-    pub event_type: WebhookEvent,
+    pub event: WebhookEvent,
+    pub branch: String,
+    pub repo_config: RepoSettings,
     pub channel_id: ChannelId,
-    pub repo_config: Option<RepoSettings>,
-}
-
-#[derive(Snafu, Debug)]
-pub enum EventError {
-    #[snafu(display("Invalid body"))]
-    InvalidBody { source: BytesRejection },
-    #[snafu(display("X-GitHub-Event header is invalid"))]
-    InvalidHeader,
-    #[snafu(display("Encountered error during deserialization"))]
-    DeserializationError { source: serde_json::Error },
-    #[snafu(display("Repository is missing or invalid"))]
-    InvalidRepository,
-    #[snafu(display("No config found"))]
-    InvalidConfig,
-    #[snafu(display("X-Hub-Signature-256 header is missing"))]
-    MissingSignatureHeader,
-    #[snafu(display("Signature prefix is missing"))]
-    MissingSignaturePrefix,
-    #[snafu(display("Signature hex is invalid"))]
-    InvalidSignatureHex { source: FromHexError },
-    #[snafu(display("Invalid Signature"))]
-    InvalidSignature,
-    #[snafu(display("Unable to get repository config"))]
-    FailedToGetRepoConfig,
-}
-
-impl IntoResponse for EventError {
-    fn into_response(self) -> Response {
-        (StatusCode::BAD_REQUEST, self.to_string()).into_response()
-    }
 }
 
 impl<S> FromRequest<S> for GithubEvent
 where
     S: Send + Sync,
 {
-    type Rejection = EventError;
+    type Rejection = Error;
 
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let headers = req.headers().clone();
@@ -69,15 +41,15 @@ where
             .and_then(|header| header.to_str().ok())
             .context(InvalidHeaderSnafu)?;
 
-        let event =
-            WebhookEvent::try_from_header_and_body(event, &body).context(DeserializationSnafu)?;
+        let event = WebhookEvent::try_from_header_and_body(event, &body)
+            .context(DeserializationErrorJsonSnafu)?;
 
         let event_clone = event.clone();
 
         let repo = event_clone.repository.context(InvalidRepositorySnafu)?;
 
         let config = Config::get()
-            .get(repo.url.as_str())
+            .get(repo.html_url.unwrap().as_str())
             .cloned()
             .context(InvalidConfigSnafu)?;
 
@@ -114,8 +86,7 @@ where
 
         let mut builder = repo_handler.get_content().path(".ci-preview.yml");
 
-        // TODO: check over
-        if let Some(r#ref) = git_ref {
+        if let Some(r#ref) = &git_ref {
             builder = builder.r#ref(r#ref);
         }
 
@@ -125,13 +96,14 @@ where
             .ok()
             .and_then(|c| c.items.into_iter().next())
             .and_then(|c| Content::decoded_content(&c))
-            .and_then(|c| serde_json::from_str(c.as_str()).ok())
+            .and_then(|c| serde_norway::from_str(&c).ok())
             .context(FailedToGetRepoConfigSnafu)?;
 
         Ok(GithubEvent {
-            event_type: event,
-            channel_id: config.channel_id,
+            event,
+            branch: git_ref.unwrap_or_else(|| "[Unknown Branch]".into()),
             repo_config: repo_settings,
+            channel_id: config.channel_id,
         })
     }
 }
