@@ -4,6 +4,7 @@ use octocrab::models::RunId;
 use serenity::all::{EmojiId, MessageId};
 use serenity::http::Http;
 use std::env;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -30,16 +31,20 @@ pub struct Emojis {
 
 impl App {
     pub fn new(serenity_http: Arc<Http>) -> Self {
+        let ttl_time = env::var("CACHE_TTL").ok()
+            .and_then(|ttl| ttl.parse::<u64>().ok())
+            .unwrap_or_else(|| 60);
+        let cache_ttl = Duration::from_secs(ttl_time * 60);
+        
         Self {
             https: reqwest::Client::new(),
             serenity_http,
-            // TODO - Make TTL configurable
             cache: AppCache {
                 commits: Cache::builder()
-                    .time_to_live(Duration::from_secs(60 * 60))
+                    .time_to_live(cache_ttl)
                     .build(),
                 running_workflows: Cache::builder()
-                    .time_to_live(Duration::from_secs(60 * 60))
+                    .time_to_live(cache_ttl)
                     .build(),
             },
             emojis: Emojis {

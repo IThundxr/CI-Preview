@@ -41,8 +41,9 @@ impl Config {
     }
 
     fn load() -> Result<HashMap<String, Config>, Whatever> {
-        let config_contents =
-            fs::read_to_string("./config.yml").whatever_context("Failed to read config.yml")?;
+        let config_contents = fs::read_to_string("./config.yml")
+            .or_else(|_| fs::read_to_string("/app/config.yml"))
+            .whatever_context("Failed to read config.yml")?;
         let parsed = serde_norway::from_str::<HashMap<String, Self>>(&config_contents)
             .with_whatever_context(|e| {
                 error!("Failed to parse config.yml: {e}");
