@@ -141,7 +141,7 @@ pub async fn handle_github_webhhook(
                         .author(author)
                         .description(description)
                         .footer(footer)
-                        .color(Colour::BLUE)
+                        .color(branding::BLURPLE)
                 };
 
                 match payload.action {
