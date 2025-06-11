@@ -190,29 +190,31 @@ pub async fn handle_github_webhhook(
                         let mut logs = None;
                         let (run_status, color) = match workflow.conclusion_enum {
                             Some(Conclusion::Success) => {
-                                let mut buttons = Vec::new();
+                                if event.buttons {
+                                    let mut buttons = Vec::new();
 
-                                for (id, button) in config.buttons {
-                                    let url = button
-                                        .url
-                                        .clone()
-                                        .map(|i| {
-                                            i.replace("${version}", &formatted_mod_version)
-                                                .replace("${mod_version}", &mod_version)
-                                                .replace(
-                                                    "${minecraft_version}",
-                                                    &config.minecraft_version,
-                                                )
-                                                .replace("${build_number}", &run_number.to_string())
-                                        })
-                                        .unwrap_or_default();
+                                    for (id, button) in config.buttons {
+                                        let url = button
+                                            .url
+                                            .clone()
+                                            .map(|i| {
+                                                i.replace("${version}", &formatted_mod_version)
+                                                    .replace("${mod_version}", &mod_version)
+                                                    .replace(
+                                                        "${minecraft_version}",
+                                                        &config.minecraft_version,
+                                                    )
+                                                    .replace("${build_number}", &run_number.to_string())
+                                            })
+                                            .unwrap_or_default();
 
-                                    buttons.push(button.convert(&id, &url))
+                                        buttons.push(button.convert(&id, &url))
+                                    }
+
+                                    let action_row = CreateActionRow::Buttons(buttons);
+
+                                    edit = edit.components(vec![action_row]);
                                 }
-
-                                let action_row = CreateActionRow::Buttons(buttons);
-
-                                edit = edit.components(vec![action_row]);
 
                                 let emoji = app
                                     .serenity_http

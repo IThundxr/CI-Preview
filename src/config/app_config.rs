@@ -24,12 +24,14 @@ pub struct Config {
     pub repository_url: String,
     pub webhook_secret: String,
     pub channel_id: ChannelId,
+    #[serde(default = "bool_true")]
+    pub buttons: bool,
 }
 
 impl Config {
     fn reload() {
         let result = Self::load().map(|new_config| CONFIG.store(Arc::new(new_config)));
-
+        
         match result {
             Ok(_) => info!("Configuration reloaded successfully."),
             Err(e) => error!("Failed to reload config: {e}. Keeping existing config."),
@@ -76,4 +78,8 @@ impl Config {
 
         Ok(watcher)
     }
+}
+
+fn bool_true() -> bool {
+    true
 }

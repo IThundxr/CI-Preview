@@ -21,6 +21,7 @@ pub struct GithubEvent {
     pub branch: String,
     pub repo_config: RepoSettings,
     pub channel_id: ChannelId,
+    pub buttons: bool,
 }
 
 impl<S> FromRequest<S> for GithubEvent
@@ -104,6 +105,7 @@ where
             branch: git_ref.unwrap_or_else(|| "[Unknown Branch]".into()),
             repo_config: repo_settings,
             channel_id: config.channel_id,
+            buttons: config.buttons,
         })
     }
 }
