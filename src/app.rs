@@ -1,6 +1,6 @@
 use moka::future::Cache;
-use octocrab::models::webhook_events::payload::PushWebhookEventCommit;
 use octocrab::models::RunId;
+use octocrab::models::webhook_events::payload::PushWebhookEventCommit;
 use serenity::all::{EmojiId, MessageId};
 use serenity::http::Http;
 use std::env;
@@ -30,21 +30,18 @@ pub struct Emojis {
 
 impl App {
     pub fn new(serenity_http: Arc<Http>) -> Self {
-        let ttl_time = env::var("CACHE_TTL").ok()
+        let ttl_time = env::var("CACHE_TTL")
+            .ok()
             .and_then(|ttl| ttl.parse::<u64>().ok())
             .unwrap_or_else(|| 60);
         let cache_ttl = Duration::from_secs(ttl_time * 60);
-        
+
         Self {
             https: reqwest::Client::new(),
             serenity_http,
             cache: AppCache {
-                commits: Cache::builder()
-                    .time_to_live(cache_ttl)
-                    .build(),
-                running_workflows: Cache::builder()
-                    .time_to_live(cache_ttl)
-                    .build(),
+                commits: Cache::builder().time_to_live(cache_ttl).build(),
+                running_workflows: Cache::builder().time_to_live(cache_ttl).build(),
             },
             emojis: Emojis {
                 processing: Emojis::for_env_var("PROCESSING_EMOJI"),

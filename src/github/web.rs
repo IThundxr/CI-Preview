@@ -5,8 +5,8 @@ use crate::github::octocrab::models::workflows_extension::{JobsList, WorkflowRun
 use crate::github::verification::GithubEvent;
 use crate::util::time::format_duration;
 use axum::extract::State;
-use octocrab::models::webhook_events::payload::WorkflowRunWebhookEventAction;
 use octocrab::models::webhook_events::WebhookEventPayload;
+use octocrab::models::webhook_events::payload::WorkflowRunWebhookEventAction;
 use octocrab::models::workflows::Conclusion;
 use regex::Regex;
 use serenity::all::colours::branding;
@@ -106,7 +106,9 @@ pub async fn handle_github_webhhook(
 
                     // TODO - Magic number :(
                     if formatted_commits.len() > 3072 {
-                        formatted_commits = format!("Commit list is too long to display, please look [here]({html_url}/commits/{head_sha}) instead.")
+                        formatted_commits = format!(
+                            "Commit list is too long to display, please look [here]({html_url}/commits/{head_sha}) instead."
+                        )
                     }
 
                     formatted_commits
