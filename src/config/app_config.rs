@@ -1,5 +1,5 @@
 use arc_swap::{ArcSwap, Guard};
-use notify::{Error, Event, INotifyWatcher, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 use serenity::all::ChannelId;
@@ -60,7 +60,7 @@ impl Config {
         Ok(map)
     }
 
-    pub fn watch() -> Result<INotifyWatcher, Error> {
+    pub fn watch() -> Result<RecommendedWatcher, Error> {
         let mut watcher = RecommendedWatcher::new(
             move |result: Result<Event, Error>| {
                 let event = result.unwrap();
