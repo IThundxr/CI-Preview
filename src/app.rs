@@ -4,7 +4,6 @@ use octocrab::models::RunId;
 use serenity::all::{EmojiId, MessageId};
 use serenity::http::Http;
 use std::env;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
