@@ -47,10 +47,9 @@ pub async fn handle_github_webhhook(
             let repo = event.event.repository.context(FailedToUnwrapValueSnafu)?;
             let branch = event.branch;
 
-            // Rethink
+            // TODO - Rethink
             let sender = event.event.sender.context(FailedToUnwrapValueSnafu)?;
             let owner = repo.owner.context(FailedToUnwrapValueSnafu)?;
-            let html_url = workflow.inner.html_url;
             let head_sha = workflow.inner.head_sha;
             let run_number = workflow.inner.run_number;
 
@@ -106,8 +105,9 @@ pub async fn handle_github_webhhook(
 
                     // TODO - Magic number :(
                     if formatted_commits.len() > 3072 {
+                        let url = repo.html_url.context(FailedToUnwrapValueSnafu)?;
                         formatted_commits = format!(
-                            "Commit list is too long to display, please look [here]({html_url}/commits/{head_sha}) instead."
+                            "Commit list is too long to display, please look [here]({url}/commits/{head_sha}) instead."
                         )
                     }
 
@@ -120,7 +120,7 @@ pub async fn handle_github_webhhook(
                 let embed = |status, extra| {
                     let author = CreateEmbedAuthor::new(format!("{}/{}", repo.name, branch))
                         .icon_url(owner.avatar_url)
-                        .url(html_url);
+                        .url(workflow.inner.html_url);
 
                     let description = format!(
                         r"
