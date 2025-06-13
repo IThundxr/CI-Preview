@@ -31,7 +31,7 @@ pub struct Config {
 impl Config {
     fn reload() {
         let result = Self::load().map(|new_config| CONFIG.store(Arc::new(new_config)));
-        
+
         match result {
             Ok(_) => info!("Configuration reloaded successfully."),
             Err(e) => error!("Failed to reload config: {e}. Keeping existing config."),

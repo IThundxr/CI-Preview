@@ -204,7 +204,10 @@ pub async fn handle_github_webhhook(
                                                         "${minecraft_version}",
                                                         &config.minecraft_version,
                                                     )
-                                                    .replace("${build_number}", &run_number.to_string())
+                                                    .replace(
+                                                        "${build_number}",
+                                                        &run_number.to_string(),
+                                                    )
                                             })
                                             .unwrap_or_default();
 
