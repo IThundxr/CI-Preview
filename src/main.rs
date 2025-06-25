@@ -9,9 +9,10 @@ use crate::app::App;
 use crate::config::app_config::Config;
 use crate::github::web::handle_github_webhhook;
 use axum::Router;
-use axum::routing::post;
+use axum::routing::{get, post};
 use snafu::{ResultExt, Whatever};
 use std::env;
+use axum::http::StatusCode;
 use tracing::log::info;
 use tracing_subscriber::EnvFilter;
 
@@ -40,6 +41,7 @@ async fn main() -> Result<(), Whatever> {
     let _ = Config::watch();
 
     let router = Router::new()
+        .route("/status", get(|| async { StatusCode::OK }))
         .route("/github/webhook", post(handle_github_webhhook))
         .with_state(App::new(bot_http));
 
