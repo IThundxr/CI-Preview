@@ -9,10 +9,10 @@ use crate::app::App;
 use crate::config::app_config::Config;
 use crate::github::web::handle_github_webhhook;
 use axum::Router;
+use axum::http::StatusCode;
 use axum::routing::{get, post};
 use snafu::{ResultExt, Whatever};
 use std::env;
-use axum::http::StatusCode;
 use tracing::log::info;
 use tracing_subscriber::EnvFilter;
 
